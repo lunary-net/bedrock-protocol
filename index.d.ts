@@ -1,234 +1,365 @@
-import EventEmitter from 'events'
-import { Realm } from 'prismarine-realms'
-import { ServerDeviceCodeResponse } from 'prismarine-auth'
+import EventEmitter from 'events';
+import { Realm } from 'prismarine-realms';
+import { ServerDeviceCodeResponse } from 'prismarine-auth';
 
 declare module 'bedrock-protocol' {
-  type Version = '1.21.70' | '1.21.60' | '1.21.50' | '1.21.42' | '1.21.30' | '1.21.2' | '1.21.0' | '1.20.80' | '1.20.71' | '1.20.61' | '1.20.50' | '1.20.40' | '1.20.30' | '1.20.10' | '1.20.0' | '1.19.80' | '1.19.70' | '1.19.63' | '1.19.62' | '1.19.60' | '1.19.51' | '1.19.50' | '1.19.41' | '1.19.40' | '1.19.31' | '1.19.30' | '1.19.22' | '1.19.21' | '1.19.20' | '1.19.11' | '1.19.10' | '1.19.2' | '1.19.1' | '1.18.31' | '1.18.30' | '1.18.12' | '1.18.11' | '1.18.10' | '1.18.2' | '1.18.1' | '1.18.0' | '1.17.41' | '1.17.40' | '1.17.34' | '1.17.30' | '1.17.11' | '1.17.10' | '1.17.0' | '1.16.220' | '1.16.210' | '1.16.201'
+  type ProtocolVersion = 786 | 776 | 766 | 748 | 729 | 712 | 686 | 685 | 671 | 662 | 649 | 630 | 622 | 618 | 594 | 589 | 582 | 575 | 568 | 567 | 560 | 557 | 554 | 545 | 544 | 534 | 527 | 503 | 486 | 475 | 471 | 465 | 448 | 440 | 431 | 428 | 422 | 100 | 82 | 70;
+  
+  type Version = '1.21.71' | '1.21.70' | '1.21.60' | '1.21.50' | '1.21.42' | '1.21.30' | '1.21.2' | '1.21.0' | '1.20.80' | '1.20.71' | '1.20.61' | '1.20.50' | '1.20.40' | '1.20.30' | '1.20.10' | '1.20.0' | '1.19.80' | '1.19.70' | '1.19.63' | '1.19.62' | '1.19.60' | '1.19.51' | '1.19.50' | '1.19.41' | '1.19.40' | '1.19.31' | '1.19.30' | '1.19.22' | '1.19.21' | '1.19.20' | '1.19.11' | '1.19.10' | '1.19.2' | '1.19.1' | '1.18.31' | '1.18.30' | '1.18.12' | '1.18.11' | '1.18.10' | '1.18.2' | '1.18.1' | '1.18.0' | '1.17.41' | '1.17.40' | '1.17.34' | '1.17.30' | '1.17.11' | '1.17.10' | '1.17.0' | '1.16.220' | '1.16.210' | '1.16.201';
+
+  type Language = 'en_US' | 'fr_FR' | 'de_DE' | 'es_ES' | 'it_IT' | 'pt_PT' | 'pt_BR' | 'zh_CN' | 'zh_TW' | 'ja_JP' | 'ko_KR' | 'ru_RU' | 'ar_SA' | 'hi_IN' | 'nl_NL' | 'sv_SE' | 'no_NO' | 'da_DK' | 'fi_FI' | 'pl_PL' | 'tr_TR' | 'cs_CZ' | 'el_GR' | 'he_IL' | 'th_TH' | 'vi_VN' | 'id_ID';
 
   export interface Options {
-    // The string version to start the client or server as
-    version?: Version
-    // For the client, the host of the server to connect to (default: 127.0.0.1)
-    // For the server, the host to bind to (default: 0.0.0.0)
-    host: string
-    // The port to connect or bind to, default: 19132
-    port: number
-    // For the client, if we should login with Microsoft/Xbox Live.
-    // For the server, if we should verify client's authentication with Xbox Live.
-    offline?: boolean
+    /**
+     * The Minecraft version to connect to.
+     * If provided, it will ensure that the protocol version matches the provided version.
+     * Example versions include '1.21.71', '1.21.60', etc.
+     */
+    version?: Version;
 
-    // Which raknet backend to use
-    raknetBackend?: 'jsp-raknet' | 'raknet-native' | 'raknet-node'
-    // If using JS implementation of RakNet, should we use workers? (This only affects the client)
-    useRaknetWorker?: boolean
-    // Compression level for zlib, default to 7
-    compressionLevel?: number
-    // How frequently the packet queue should be flushed in milliseconds, defaults to 20ms
-    batchingInterval?: number
+    /**
+     * The server's host IP address or domain name.
+     */
+    host: string;
+
+    /**
+     * The server's port number.
+     */
+    port: number;
+
+    /**
+     * If true, the connection will be treated as offline, meaning authentication will be bypassed.
+     */
+    offline?: boolean;
+
+    /**
+     * The backend for RakNet protocol to use (either JavaScript or native implementations).
+     */
+    raknetBackend?: 'jsp-raknet' | 'raknet-native' | 'raknet-node';
+
+    /**
+     * If true, the RakNet protocol will use a web worker for performance.
+     */
+    useRaknetWorker?: boolean;
+
+    /**
+     * The level of compression to use for data sent to the server.
+     */
+    compressionLevel?: number;
+
+    /**
+     * The time interval for batching multiple messages together (in milliseconds).
+     */
+    batchingInterval?: number;
   }
 
   export interface ClientOptions extends Options {
-    // The username to connect to the server as
-    username: string
-    // The view distance in chunks
-    viewDistance?: number
-    // Specifies which game edition to sign in as. Optional, but some servers verify this.
-    authTitle?: string
-    // How long to wait in milliseconds while trying to connect to the server.
-    connectTimeout?: number
-    // whether to skip initial ping and immediately connect
-    skipPing?: boolean
-    // Update the options' port parameter to match the port broadcast on the server's ping data (default to true if `realms` not specified)
-    followPort?: boolean
-    // where to log connection information to (default to console.log)
-    conLog?: any
-    // used to join a Realm instead of supplying a host/port
-    realms?: RealmsOptions
-    // the path to store authentication caches, defaults to .minecraft
-    profilesFolder?: string | false
-    // Called when microsoft authorization is needed when not provided it will the information log to the console instead
-    onMsaCode?: (data: ServerDeviceCodeResponse) => void
+    /**
+     * The protocol version to use for the connection.
+     * This must match the version provided by the server.
+     */
+    protocolVersion: ProtocolVersion;
+
+    /**
+     * Skin data configuration for the player.
+     */
+    skinData: skinDataOptions;
+
+    /**
+     * The username to use for authentication and identification.
+     */
+    username: string;
+
+    /**
+     * The distance around the player in chunks that should be loaded for the world.
+     */
+    viewDistance?: number;
+
+    /**
+     * The platform to connect from. Can be 'bedrock' or 'java'.
+     */
+    platform?: 'bedrock' | 'java';
+
+    /**
+     * The authentication flow type. Can be 'live', 'msal', or 'sisu'.
+     */
+    flow?: 'live' | 'msal' | 'sisu';
+
+    /**
+     * The title for the authentication request (optional).
+     */
+    authTitle?: string;
+
+    /**
+     * The timeout duration for the connection attempt, in milliseconds.
+     */
+    connectTimeout?: number;
+
+    /**
+     * If true, the initial ping to the server will be skipped.
+     */
+    skipPing?: boolean;
+
+    /**
+     * If true, will attempt to follow a connected port in case of port changes.
+     */
+    followPort?: boolean;
+
+    /**
+     * Custom logging function for connection logs.
+     */
+    conLog?: any;
+
+    /**
+     * Realms options for connecting to a Minecraft Realms server.
+     */
+    realms?: RealmsOptions;
+
+    /**
+     * Path or setting for profiles folder (or false to disable).
+     */
+    profilesFolder?: string | false;
+
+    /**
+     * Callback to handle the device code response for MSA authentication.
+     */
+    onMsaCode?: (data: ServerDeviceCodeResponse) => void;
+  }
+
+  export interface skinDataOptions {
+    SkinGeometryDataEngineVersion: string;
+    ClientRandomId: Date.now;
+    CurrentInputMode: number | 1;
+    DefaultInputMode: number | 1;
+    DeviceId: string;
+    DeviceModel: string | 'PrismarineJS';
+    DeviceOS: number | 7;
+    GameVersion: Version;
+    GuiScale: number | -1;
+    LanguageCode: Language | 'en_GB';
+    PlatformOfflineId: string;
+    PlatformOnlineId: string;
+    PlayFabId: string;
+    SelfSignedId: string;
+    ServerAddress: string;
+    ThirdPartyName: string;
+    ThirdPartyNameOnly: boolean;
+    UIProfile: number;
+    IsEditorMode: boolean;
+    TrustedSkin: boolean;
+    OverrideSkin: boolean;
+    CompatibleWithClientSideChunkGen: boolean;
+    MaxViewDistance: number;
+    MemoryTier: number;
+    PlatformType: number;
   }
 
   export interface ServerOptions extends Options {
-    // The maximum number of players allowed on the server at any time.
-    maxPlayers?: number
+    /**
+     * The maximum number of players allowed to connect to the server.
+     */
+    maxPlayers?: number;
+
+    /**
+     * The message of the day (MOTD) to display on the server list.
+     */
     motd?: {
-      // The header for the MOTD shown in the server list.
-      motd: string
-      // The sub-header for the MOTD shown in the server list.
-      levelName?: string
-    }
-    advertisementFn?: () => ServerAdvertisement
+      motd: string;
+      levelName?: string;
+    };
+
+    /**
+     * A function to get the server advertisement details.
+     * Used for server listing and displaying server information.
+     */
+    advertisementFn?: () => ServerAdvertisement;
   }
 
   enum ClientStatus {
     Disconnected,
     Authenticating,
     Initializing,
-    Initialized
+    Initialized,
   }
 
   export class Connection extends EventEmitter {
-    readonly status: ClientStatus
-
-    // Check if the passed version is less than or greater than the current connected client version.
-    versionLessThan(version: string | number): boolean
-    versionGreaterThan(version: string | number): boolean
-    versionGreaterThanOrEqualTo(version: string | number): boolean
-
-    // Writes a Minecraft bedrock packet and sends it without queue batching
-    write(name: string, params: object): void
-    // Adds a Minecraft bedrock packet to be sent in the next outgoing batch
-    queue(name: string, params: object): void
-    // Writes a MCPE buffer to the connection and skips Protodef serialization. `immediate` if skip queue.
-    sendBuffer(buffer: Buffer, immediate?: boolean): void
+    readonly status: ClientStatus;
+    versionLessThan(version: string | number): boolean;
+    versionGreaterThan(version: string | number): boolean;
+    versionGreaterThanOrEqualTo(version: string | number): boolean;
+    write(name: string, params: object): void;
+    queue(name: string, params: object): void;
+    sendBuffer(buffer: Buffer, immediate?: boolean): void;
   }
 
   type PlayStatus =
     | 'login_success'
-    // # Displays "Could not connect: Outdated client!"
     | 'failed_client'
-    // # Displays "Could not connect: Outdated server!"
     | 'failed_spawn'
-    // # Sent after world data to spawn the player
-    | 'player_spawn'
-    // # Displays "Unable to connect to world. Your school does not have access to this server."
     | 'failed_invalid_tenant'
-    // # Displays "The server is not running Minecraft: Education Edition. Failed to connect."
     | 'failed_vanilla_edu'
-    // # Displays "The server is running an incompatible edition of Minecraft. Failed to connect."
     | 'failed_edu_vanilla'
-    // # Displays "Wow this server is popular! Check back later to see if space opens up. Server Full"
-    | 'failed_server_full'
+    | 'failed_server_full';
 
   export class Client extends Connection {
-    constructor(options: Options)
-    // The client's EntityID returned by the server
-    readonly entityId: BigInt
+    constructor(options: ClientOptions);
 
     /**
-     * Close the connection, leave the server.
+     * The unique entity ID for the client.
      */
-    close(reason?: string): void
+    readonly entityId: BigInt;
 
     /**
-     * Send a disconnect packet and close the connection
+     * Close the client connection gracefully.
+     * Optionally provide a reason for disconnecting.
      */
-    disconnect(): void
+    close(reason?: string): void;
+
+    /**
+     * Disconnect the client from the server.
+     */
+    disconnect(): void;
   }
 
-  /**
-   * `Player` represents a player connected to the server.
-   */
   export class Player extends Connection {
     profile?: {
-      xuid: string
-      uuid: string
-      name: string
-    }
-    version: string
-
-    getUserData(): object
-
-    /**
-     * Disconnects a client before it has logged in via a PlayStatus packet.
-     * @param {string} playStatus
-     */
-    sendDisconnectStatus(playStatus: PlayStatus): void
+      xuid: string;
+      uuid: string;
+      name: string;
+    };
+    version: string;
+    getUserData(): object;
 
     /**
-     * Disconnects a client
-     * @param reason The message to be shown to the user on disconnect
-     * @param hide Don't show the client the reason for the disconnect
+     * Send a disconnect status message to the player.
      */
-    disconnect(reason: string, hide?: boolean): void
+    sendDisconnectStatus(playStatus: PlayStatus): void;
 
     /**
-     * Close the connection. Already called by disconnect. Call this to manually close RakNet connection.
+     * Disconnect the player from the server.
      */
-    close(): void
+    disconnect(reason: string, hide?: boolean): void;
 
-    on(event: 'login', cb: () => void): any
-    on(event: 'join', cb: () => void): any
-    on(event: 'close', cb: (reason: string) => void): any
-    on(event: 'packet', cb: (packet: object) => void): any
-    on(event: 'spawn', cb: (reason: string) => void): any
+    /**
+     * Close the player connection.
+     */
+    close(): void;
+
+    on(event: 'login', cb: () => void): any;
+    on(event: 'join', cb: () => void): any;
+    on(event: 'close', cb: (reason: string) => void): any;
+    on(event: 'packet', cb: (packet: object) => void): any;
+    on(event: 'spawn', cb: (reason: string) => void): any;
   }
 
   export class Server extends EventEmitter {
-    clients: Map<string, Player>
-    conLog: Function
+    clients: Map<string, Player>;
 
-    constructor(options: Options)
+    /**
+     * Custom logging function for server logs.
+     */
+    conLog: Function;
 
-    listen(): Promise<void>
-    close(disconnectReason?: string): Promise<void>
+    constructor(options: ServerOptions);
 
-    on(event: 'connect', cb: (client: Player) => void): any
-  }
+    /**
+     * Start the server and begin listening for connections.
+     */
+    listen(): Promise<void>;
 
-  type RelayOptions = Options & {
-    // Toggle packet logging.
-    logging?: boolean
-    // Skip authentication for connecting clients?
-    offline?: false
-    // Specifies which game edition to sign in as to the destination server. Optional, but some servers verify this.
-    authTitle?: string
-    // Where to proxy requests to.
-    destination: {
-      realms?: RealmsOptions
-      host: string
-      port: number
-      // Skip authentication connecting to the remote server?
-      offline?: boolean
-    }
-    // Whether to enable chunk caching (default: false)
-    enableChunkCaching?: boolean
+    /**
+     * Close the server and disconnect all clients.
+     */
+    close(disconnectReason?: string): Promise<void>;
 
-    // Only allow one client to connect at a time (default: false)
-    forceSingle?: boolean
-
-    // Do not disconnect clients on server packet parsing errors and drop the packet instead (default: false)
-    omitParseErrors?: boolean
-
-    // Dispatched when a new client has logged in, and we need authentication
-    // tokens to join the backend server. Cached after the first login.
-    // If this is not specified, the client will be disconnected with a login prompt.
-    onMsaCode?(data: ServerDeviceCodeResponse, client: Client): any
-    // prismarine-auth configuration
-    flow?: string,
-    deviceType?: string
+    on(event: 'connect', cb: (client: Player) => void): any;
   }
 
   export class Relay extends Server {
-    constructor(options: RelayOptions)
+    constructor(options: RelayOptions);
   }
 
   export class ServerAdvertisement {
-    motd: string
-    name: string
-    protocol: number
-    version: string
-    playersOnline: number
-    playersMax: number
-    serverId: string
-    levelName: string
-    gamemodeId: number
-    portV4: number
-    portV6: number
+    motd: string;
+    name: string;
+    protocol: number;
+    version: string;
+    playersOnline: number;
+    playersMax: number;
+    serverId: string;
+    levelName: string;
+    gamemodeId: number;
+    portV4: number;
+    portV6: number;
 
-    constructor(obj: object, port: number, version: string)
+    constructor(obj: object, port: number, version: string);
   }
 
   export interface RealmsOptions {
-    realmId?: string
-    realmInvite?: string
-    pickRealm?: (realms: Realm[]) => Realm
+    realmId?: string;
+    realmInvite?: string;
+    pickRealm?: (realms: Realm[]) => Realm;
   }
 
-  export function createClient(options: ClientOptions): Client
-  export function createServer(options: ServerOptions): Server
+  export function createClient(options: ClientOptions): Client;
+  export function createServer(options: ServerOptions): Server;
+
+  export function ping({
+    host,
+    port,
+  }: {
+    host: string;
+    port: number;
+  }): Promise<ServerAdvertisement>;
+
+  // Validate ProtocolVersion and Version Relationship
+  type ProtocolVersionToVersionMap = {
+    786: '1.21.71',
+    776: '1.21.60',
+    766: '1.21.50',
+    748: '1.21.42',
+    729: '1.21.30',
+    712: '1.21.20',
+    686: '1.21.2',
+    685: '1.21.0',
+    671: '1.20.80',
+    662: '1.20.71',
+    649: '1.20.61',
+    630: '1.20.50',
+    622: '1.20.40',
+    618: '1.20.30',
+    594: '1.20.15',
+    589: '1.20.0',
+    582: '1.19.80',
+    575: '1.19.70',
+    568: '1.19.63',
+    567: '1.19.60',
+    560: '1.19.50',
+    557: '1.19.40',
+    554: '1.19.30',
+    545: '1.19.21',
+    544: '1.19.20',
+    534: '1.19.10',
+    527: '1.19.1',
+    503: '1.18.30',
+    486: '1.18.11',
+    475: '1.18.0',
+    471: '1.17.40',
+    465: '1.17.30',
+    448: '1.17.10',
+    440: '1.17.0',
+    431: '1.16.220',
+    428: '1.16.210',
+    422: '1.16.201',
+    100: '1.0.0',
+    82: '0.15.6',
+    70: '0.14.3',
+  };
+
+  // Enforce that the selected version must match the protocol version
+  type ValidateProtocolVersion<P extends ProtocolVersion, V extends Version> = V extends ProtocolVersionToVersionMap[P] ? true : false;
+}
+
 
   export function ping({
     host,
